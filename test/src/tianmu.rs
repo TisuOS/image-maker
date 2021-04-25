@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
-use std::{cmp::min, io::SeekFrom, mem::size_of, path::Path, ptr::slice_from_raw_parts};
+use std::{cmp::min, fs::{OpenOptions}, io::{Read, Seek, SeekFrom, Write}, mem::size_of, path::Path, ptr::slice_from_raw_parts};
 use easy_fs::File;
 use tianmu_fs::{DirItem, MAGIC, SuperBlock};
 use crate::require::MakeSystem;
@@ -19,8 +19,6 @@ impl TianMu {
     pub fn new(block_size : usize, image_size : usize)->Self {
         let block_num = image_size / block_size;
         let root_offset = (block_num*8 + 1024 + block_size - 1) / block_size * block_size;
-        println!("block size {}, block num {}, map at {:x}, root at {:x}",
-            block_size, block_num, 1024, root_offset);
         Self{
             block_size,
             image_size,
@@ -30,13 +28,16 @@ impl TianMu {
         }
     }
 
-    fn store_file(&self, path : &String, image:&mut File)->usize {
+    fn store_file(&self, path : &String, image:&mut File) {
+        let mut file = File::open(path, easy_fs::Option::ReadOnly);
         let p = Path::new(path);
-        let ctx = std::fs::read(path).unwrap();
-        let data = ctx.as_slice();
-        let size = data.len();
+        
+        let mut ctx = String::with_capacity(file.size());
+        let data = unsafe {ctx.as_bytes_mut()};
+        let size = file.read(data);
         let num = (size + self.block_size - 1) / self.block_size;
         let blocks = self.find_free_block_idx(num, image);
+        println!("file size {}, size {}, blocks {:?}", size, self.block_size, blocks);
         let mut st = 0;
         for idx in blocks.iter() {
             let ed = min(st + self.block_size, data.len());
@@ -46,33 +47,20 @@ impl TianMu {
             image.write(buf);
             st += self.block_size;
         }
-        self.fill_block_map(&blocks, image);
-        *blocks.first().unwrap()
+        self.fill_block_map(blocks, image);
     }
 
     fn find_dir_addr(&self, path : &String, image:&mut File)->Result<usize, ()> {
         let mut p : Vec<&str> = path.split("/").collect();
         p.remove(p.len() - 1);
-        let mut idx = self.root_offset / self.block_size;
-        println!("find dir addr {:?}", p);
+        let mut addr = self.root_offset;
+        println!("{:?}", p);
         for name in p {
-            if name.len() == 0 {
-                continue;
-            }
-            let mut name = name.to_string();
-            if name.len() > 15 {
-                name = name.split_at(15).0.to_string();
-            }
-            
             let item = self.get_dir_item(
-                idx, &name.to_string(), image);
-            if item.is_none() {
-                println!("find dir addr no {} {}", path, name);
-            }
-            let item = item.unwrap();
-            idx = item.start_block as usize;
+                addr, &name.to_string(), image).unwrap();
+            addr = item.start_block as usize * self.block_size;
         }
-        Ok(idx * self.block_size)
+        Ok(addr)
     }
 
     fn add_dir_item(&self, dir_idx : usize, item : DirItem, image:&mut File)->Result<(), ()> {
@@ -80,14 +68,11 @@ impl TianMu {
         for idx in self.get_block_chain(dir_idx, image).iter() {
             let addr = idx * self.block_size;
             let data : &mut [u8;size_of::<DirItem>()] = &mut [0;size_of::<DirItem>()];
-            image.seek(SeekFrom::Start(addr as u64));
             for i in 0..num {
                 let len = image.read(data);
                 let t = slice_to_val::<DirItem>(data);
                 if t.empty() {
                     val_to_slice(data, item);
-                    println!("{} add at {:x}",
-                        slice_to_string(&item.name), image.position() - len);
                     image.seek(SeekFrom::Current(-(len as i64)));
                     image.write(data);
                     return Ok(());
@@ -134,7 +119,7 @@ impl TianMu {
         Ok(next)
     }
 
-    fn fill_block_map(&self, blocks: &Vec<usize>, image:&mut File) {
+    fn fill_block_map(&self, blocks: Vec<usize>, image:&mut File) {
         let mut next = END;
         for idx in blocks.iter().rev() {
             let addr = self.block_map_addr + idx * 8;
@@ -148,11 +133,12 @@ impl TianMu {
 
     fn find_free_block_idx(&self, num:usize, image:&mut File)->Vec<usize> {
         let st = self.block_map_addr;
+        println!("find at {:x}", st);
         image.seek(SeekFrom::Start(st as u64));
         let mut rt = Vec::new();
         let buf : &mut [u8;8] = &mut [0;8];
         for i in 0..self.block_num {
-            let tt = image.read(buf);
+            image.read(buf);
             let flag = slice_to_val::<u64>(buf);
             if flag == 0 {
                 rt.push(i);
@@ -170,7 +156,6 @@ impl TianMu {
         for idx in self.get_block_chain(dir_idx, image).iter() {
             let addr = idx * self.block_size;
             let data : &mut [u8;size_of::<DirItem>()] = &mut [0;size_of::<DirItem>()];
-            image.seek(SeekFrom::Start(addr as u64));
             for i in 0..num {
                 image.read(data);
                 let item = slice_to_val::<DirItem>(data);
@@ -207,12 +192,9 @@ impl TianMu {
 fn slice_to_string(s : &[u8])->String {
     let mut v = Vec::new();
     for c in s {
-        if *c == 0 {
-            break;
-        }
-        v.push(*c as u16);
+        v.push(*c);
     }
-    String::from_utf16(v.as_slice()).unwrap()
+    String::from_utf8(v).unwrap()
 }
 
 fn slice_to_val<T:Copy>(s : &[u8])->T {
@@ -232,29 +214,15 @@ fn val_to_slice<T>(s : &mut[u8], v : T) {
     /// 需传入相对路径
 impl MakeSystem for TianMu {
     fn add_directory(&self, root_path:&String, path : &String, image : &mut File) {
-        let t : Vec<&str> = path.split("/").collect();
-        let dirname = t.last().unwrap().to_string();
-        let path = path.split_once(root_path).unwrap().1;
-        let dir_idx = self.find_dir_addr(
-            &path.to_string(), image).unwrap() / self.block_size;
-        let blocks = self.find_free_block_idx(1, image);
-        self.fill_block_map(&blocks, image);
-        let item = DirItem::new_file(
-            &dirname, *blocks.first().unwrap(), 0);
-        self.add_dir_item(dir_idx, item, image).unwrap();
     }
 
     fn add_file(&self, root_path:&String, path : &String, image : &mut File) {
         let t : Vec<&str> = path.split("/").collect();
         let filename = t.last().unwrap().to_string();
-        let size = File::open(path, easy_fs::Option::ReadOnly).size();
-        let start_block = self.store_file(path, image);
+        self.store_file(path, image);
         let path = path.split_once(root_path).unwrap().1;
-        let dir_idx = self.find_dir_addr(
+        let addr = self.find_dir_addr(
             &path.to_string(), image).unwrap() / self.block_size;
-        println!("dir idx {}", dir_idx);
-        let item = DirItem::new_file(&filename, start_block, size);
-        self.add_dir_item(dir_idx, item, image).unwrap();
     }
 
     fn make_super_block(&self, image : &mut File) {

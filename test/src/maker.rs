@@ -34,8 +34,8 @@ impl<T: MakeSystem> Maker<T> {
     }
 
     pub fn make(&mut self) {
-        self.format.init_block_map(&mut self.file);
         self.format.make_super_block(&mut self.file);
+        self.format.init_block_map(&mut self.file);
         self.trace(&self.root_path.clone());
     }
 
@@ -44,8 +44,7 @@ impl<T: MakeSystem> Maker<T> {
             self.format.add_file(&self.root_path, file, &mut self.file)
         }
         for dir in self.get_dirs(dir).iter() {
-            self.format.add_directory(&self.root_path, dir, &mut self.file);
-            self.trace(dir);
+            self.format.add_directory(&self.root_path, dir, &mut self.file)
         }
     }
 
