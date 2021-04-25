@@ -239,7 +239,7 @@ impl MakeSystem for TianMu {
             &path.to_string(), image).unwrap() / self.block_size;
         let blocks = self.find_free_block_idx(1, image);
         self.fill_block_map(&blocks, image);
-        let item = DirItem::new_file(
+        let item = DirItem::new_dir(
             &dirname, *blocks.first().unwrap(), 0);
         self.add_dir_item(dir_idx, item, image).unwrap();
     }

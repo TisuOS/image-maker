@@ -12,13 +12,8 @@ version = "0.1.0"
 dependencies = [
  "easy-fs",
  "tianmu-fs",
- "ts-format",
 ]
 
 [[package]]
 name = "tianmu-fs"
-version = "0.1.0"
-
-[[package]]
-name = "ts-format"
 version = "0.1.0"

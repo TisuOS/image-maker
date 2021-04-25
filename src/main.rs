@@ -7,7 +7,7 @@ mod require;
 mod tianmu;
 mod test;
 
-const SIZE : usize = 1024 * 1024 * 8;
+const SIZE : usize = 1024 * 1024 * 32;
 
 fn main() {
     assert!(env::args().len() == 3);
