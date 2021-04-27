@@ -12,4 +12,4 @@ readme = "README.md"
 
 [dependencies]
 tianmu-fs = "0.1.0"
-easy-fs = "0.1.0"
+easy-fs = "0.1.1"
