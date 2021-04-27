@@ -5,7 +5,8 @@ version = 3
 [[package]]
 name = "easy-fs"
 version = "0.1.0"
-source = "git+https://github.com/TisuOS/easy-fs#316035918162208bafca436890c0fbdb42b25c9c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f8398ae181c2f59f6759c2a71c48b67dbcb4866c14e1637f23561fb2fdc6e34"
 
 [[package]]
 name = "image-maker"
@@ -18,4 +19,5 @@ dependencies = [
 [[package]]
 name = "tianmu-fs"
 version = "0.1.0"
-source = "git+https://github.com/TisuOS/tianmu-fs#fe763b0606349c6d1e58e1252fa55f5f057cca4b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9594aca79ce2a26f8a8434074c501b748e885d359b68c096bc4341d5b88c00f9"
