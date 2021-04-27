@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
+use core::panic;
 use std::{cmp::min, io::SeekFrom, mem::size_of, path::Path, ptr::slice_from_raw_parts};
 use easy_fs::File;
 use tianmu_fs::{DirItem, MAGIC, SuperBlock};
@@ -19,8 +20,6 @@ impl TianMu {
     pub fn new(block_size : usize, image_size : usize)->Self {
         let block_num = image_size / block_size;
         let root_offset = (block_num*8 + 1024 + block_size - 1) / block_size * block_size;
-        println!("block size {}, block num {}, map at {:x}, root at {:x}",
-            block_size, block_num, 1024, root_offset);
         Self{
             block_size,
             image_size,
@@ -54,7 +53,6 @@ impl TianMu {
         let mut p : Vec<&str> = path.split("/").collect();
         p.remove(p.len() - 1);
         let mut idx = self.root_offset / self.block_size;
-        println!("find dir addr {:?}", p);
         for name in p {
             if name.len() == 0 {
                 continue;
@@ -67,7 +65,7 @@ impl TianMu {
             let item = self.get_dir_item(
                 idx, &name.to_string(), image);
             if item.is_none() {
-                println!("find dir addr no {} {}", path, name);
+                panic!("find dir addr err, no {} in path {}", name, path);
             }
             let item = item.unwrap();
             idx = item.start_block as usize;
@@ -86,8 +84,6 @@ impl TianMu {
                 let t = slice_to_val::<DirItem>(data);
                 if t.empty() {
                     val_to_slice(data, item);
-                    println!("{} add at {:x}",
-                        slice_to_string(&item.name), image.position() - len);
                     image.seek(SeekFrom::Current(-(len as i64)));
                     image.write(data);
                     return Ok(());
@@ -252,7 +248,6 @@ impl MakeSystem for TianMu {
         let path = path.split_once(root_path).unwrap().1;
         let dir_idx = self.find_dir_addr(
             &path.to_string(), image).unwrap() / self.block_size;
-        println!("dir idx {}", dir_idx);
         let item = DirItem::new_file(&filename, start_block, size);
         self.add_dir_item(dir_idx, item, image).unwrap();
     }

@@ -37,7 +37,6 @@ impl TianMu {
         let size = file.read(data);
         let num = (size + self.block_size - 1) / self.block_size;
         let blocks = self.find_free_block_idx(num, image);
-        println!("file size {}, size {}, blocks {:?}", size, self.block_size, blocks);
         let mut st = 0;
         for idx in blocks.iter() {
             let ed = min(st + self.block_size, data.len());
@@ -54,7 +53,6 @@ impl TianMu {
         let mut p : Vec<&str> = path.split("/").collect();
         p.remove(p.len() - 1);
         let mut addr = self.root_offset;
-        println!("{:?}", p);
         for name in p {
             let item = self.get_dir_item(
                 addr, &name.to_string(), image).unwrap();
@@ -133,7 +131,6 @@ impl TianMu {
 
     fn find_free_block_idx(&self, num:usize, image:&mut File)->Vec<usize> {
         let st = self.block_map_addr;
-        println!("find at {:x}", st);
         image.seek(SeekFrom::Start(st as u64));
         let mut rt = Vec::new();
         let buf : &mut [u8;8] = &mut [0;8];
