@@ -12,7 +12,7 @@ pub struct Maker<T: MakeSystem> {
 
 impl<T: MakeSystem> Maker<T> {
     pub fn new(root_path : String, target_path : String, format: T)->Self {
-        let file = File::create(&target_path, easy_fs::Option::ReadWrite);
+        let file = File::create(&target_path);
 
         Self {
             root_path,
