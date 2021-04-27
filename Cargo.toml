@@ -1,10 +1,15 @@
 [package]
 name = "image-maker"
 version = "0.1.0"
+authors = ["belowthetree <1363558876@qq.com>"]
 edition = "2018"
+license = "GPL-3.0-or-later"
+description = "A simple image maker for TisuOS"
+repository = "https://github.com/TisuOS/image-maker"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tianmu-fs = { path = "../tianmu-fs" }
-easy-fs = { path = "../easy-fs" }
+tianmu-fs = { git = "https://github.com/TisuOS/tianmu-fs" }
+easy-fs = { git = "https://github.com/TisuOS/easy-fs" }

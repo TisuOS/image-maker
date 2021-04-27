@@ -5,6 +5,7 @@ version = 3
 [[package]]
 name = "easy-fs"
 version = "0.1.0"
+source = "git+https://github.com/TisuOS/easy-fs#316035918162208bafca436890c0fbdb42b25c9c"
 
 [[package]]
 name = "image-maker"
@@ -17,3 +18,4 @@ dependencies = [
 [[package]]
 name = "tianmu-fs"
 version = "0.1.0"
+source = "git+https://github.com/TisuOS/tianmu-fs#fe763b0606349c6d1e58e1252fa55f5f057cca4b"
